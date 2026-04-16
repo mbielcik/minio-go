@@ -70,7 +70,7 @@ const (
 	accessKey          = "ACCESS_KEY"
 	secretKey          = "SECRET_KEY"
 	enableHTTPS        = "ENABLE_HTTPS"
-        skipSseTests       = "SKIP_SSE_TESTS"
+	skipSseTests       = "SKIP_SSE_TESTS"
 	enableKMS          = "ENABLE_KMS"
 	appVersion         = "0.1.0"
 	skipCERTValidation = "SKIP_CERT_VALIDATION"

@@ -61,7 +61,7 @@ func TestPutObjectOptionsValidate(t *testing.T) {
 	for i, testCase := range testCases {
 		err := PutObjectOptions{UserMetadata: map[string]string{
 			testCase.name: testCase.value,
-		}}.validate()
+		}}.validate(nil)
 		if testCase.shouldPass && err != nil {
 			t.Errorf("Test %d - output did not match with reference results, %s", i+1, err)
 		}
@@ -82,7 +82,6 @@ func Test_SSEHeaders(t *testing.T) {
 	c, err := New("s3.amazonaws.com", &Options{
 		Transport: rt,
 	})
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -147,7 +146,6 @@ func Test_SSEHeaders(t *testing.T) {
 				uploadID:   "upId",
 				sse:        opts.ServerSideEncryption,
 			})
-
 			if err != nil {
 				t.Error(err)
 			}
@@ -167,5 +165,4 @@ func Test_SSEHeaders(t *testing.T) {
 			}
 		})
 	}
-
 }

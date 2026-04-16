@@ -181,9 +181,9 @@ func newBucketStatement(policy BucketPolicy, bucketName, prefix string) (stateme
 		}
 		if prefix != "" {
 			condKeyMap := make(ConditionKeyMap)
-			condKeyMap.Add("s3:prefix", set.CreateStringSet(prefix))
+			condKeyMap.Add("s3:prefix", set.CreateStringSet(prefix+"*"))
 			condMap := make(ConditionMap)
-			condMap.Add("StringEquals", condKeyMap)
+			condMap.Add("StringLike", condKeyMap)
 			statement.Conditions = condMap
 		}
 		statements = append(statements, statement)
@@ -217,11 +217,12 @@ func newObjectStatement(policy BucketPolicy, bucketName, prefix string) (stateme
 		Sid:       "",
 	}
 
-	if policy == BucketPolicyReadOnly {
+	switch policy {
+	case BucketPolicyReadOnly:
 		statement.Actions = readOnlyObjectActions
-	} else if policy == BucketPolicyWriteOnly {
+	case BucketPolicyWriteOnly:
 		statement.Actions = writeOnlyObjectActions
-	} else if policy == BucketPolicyReadWrite {
+	case BucketPolicyReadWrite:
 		statement.Actions = readWriteObjectActions
 	}
 
@@ -371,7 +372,6 @@ func removeStatements(statements []Statement, bucketName, prefix string) []State
 				statement.Actions.Intersection(readOnlyBucketActions).Equals(readOnlyBucketActions) &&
 				statement.Effect == "Allow" &&
 				statement.Principal.AWS.Contains("*") {
-
 				if statement.Conditions != nil {
 					stringEqualsValue := statement.Conditions["StringEquals"]
 					values := set.NewStringSet()
@@ -465,7 +465,7 @@ func appendStatement(statements []Statement, statement Statement) []Statement {
 		}
 	}
 
-	if !(statement.Actions.IsEmpty() && statement.Resources.IsEmpty()) {
+	if !statement.Actions.IsEmpty() || !statement.Resources.IsEmpty() {
 		return append(statements, statement)
 	}
 
@@ -483,7 +483,7 @@ func appendStatements(statements, appendStatements []Statement) []Statement {
 
 // Returns policy of given bucket statement.
 func getBucketPolicy(statement Statement, prefix string) (commonFound, readOnly, writeOnly bool) {
-	if !(statement.Effect == "Allow" && statement.Principal.AWS.Contains("*")) {
+	if statement.Effect != "Allow" || !statement.Principal.AWS.Contains("*") {
 		return commonFound, readOnly, writeOnly
 	}
 
@@ -508,6 +508,18 @@ func getBucketPolicy(statement Statement, prefix string) (commonFound, readOnly,
 			} else if stringNotEqualsValue, ok := statement.Conditions["StringNotEquals"]; ok {
 				if s3PrefixValues, ok := stringNotEqualsValue["s3:prefix"]; ok {
 					if !s3PrefixValues.Contains(prefix) {
+						readOnly = true
+					}
+				}
+			} else if stringLikeValue, ok := statement.Conditions["StringLike"]; ok {
+				if s3PrefixValues, ok := stringLikeValue["s3:prefix"]; ok {
+					if s3PrefixValues.Contains(prefix + "*") {
+						readOnly = true
+					}
+				}
+			} else if stringNotLikeValue, ok := statement.Conditions["StringNotLike"]; ok {
+				if s3PrefixValues, ok := stringNotLikeValue["s3:prefix"]; ok {
+					if !s3PrefixValues.Contains(prefix + "*") {
 						readOnly = true
 					}
 				}
